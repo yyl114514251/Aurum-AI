@@ -1,0 +1,1432 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 金融工作台 · 辅助决策原型</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https:;">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='4' y='3' width='16' height='18' rx='2' fill='none' stroke='%2322d3ee' stroke-width='2'/%3E%3Cpath d='M8 15l3-4 3 2 3-5' stroke='%2322d3ee' stroke-width='2' fill='none'/%3E%3C/svg%3E">
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<style>
+:root{
+  --bg:#0a0e1a; --card:#111827; --pop:#1e293b;
+  --cyan:#22d3ee; --amber:#f59e0b; --red:#ef4444; --green:#10b981;
+  --bd:rgba(34,211,238,0.15); --txt:#e2e8f0; --muted:#94a3b8;
+  --mono:'Consolas','Monaco',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--txt);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;font-size:14px;line-height:1.55}
+a{color:var(--cyan);text-decoration:none}
+a:hover{text-decoration:underline}
+/* ---------- nav ---------- */
+nav{position:fixed;top:0;left:0;right:0;height:56px;background:rgba(10,14,26,0.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 18px;z-index:100;gap:6px;overflow-x:auto}
+.logo{display:flex;align-items:center;gap:8px;font-weight:700;color:var(--cyan);margin-right:14px;white-space:nowrap}
+.logo svg{width:24px;height:24px}
+.navbtn{background:transparent;border:1px solid transparent;color:var(--muted);padding:7px 12px;border-radius:8px;cursor:pointer;font-size:13px;white-space:nowrap;transition:.15s}
+.navbtn:hover{color:var(--txt);background:var(--pop)}
+.navbtn.active{color:var(--cyan);border-color:var(--bd);background:rgba(34,211,238,0.08)}
+main{padding:72px 18px 40px;max-width:1500px;margin:0 auto}
+section[data-view]{display:none}
+section[data-view].active{display:block;animation:fade .25s ease}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+/* ---------- typography ---------- */
+h1{font-size:21px;margin-bottom:4px}
+h2{font-size:16px;margin:22px 0 10px;color:var(--cyan)}
+h3{font-size:13.5px;color:var(--txt)}
+.sub{color:var(--muted);margin-bottom:16px;font-size:13px}
+.src{margin-top:8px;font-size:11px;color:var(--muted);line-height:1.4}
+.footer-note{color:var(--muted);font-size:11.5px;margin-top:18px;line-height:1.6}
+/* ---------- layout ---------- */
+.grid{display:grid;gap:14px}
+.cards4{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.cards3{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.cards2{grid-template-columns:repeat(auto-fit,minmax(360px,1fr))}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:16px;transition:.15s}
+.card:hover{border-color:rgba(34,211,238,0.4);box-shadow:0 0 18px rgba(34,211,238,0.07)}
+.panel{background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:16px;margin-bottom:14px}
+.stat{font-size:25px;font-weight:700;color:var(--cyan);font-family:var(--mono)}
+.stat small{font-size:12px;color:var(--muted);font-weight:400}
+.delta-up{color:var(--green);font-size:12px;font-family:var(--mono)}
+.delta-down{color:var(--red);font-size:12px;font-family:var(--mono)}
+/* ---------- tags ---------- */
+.tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:10px;background:rgba(34,211,238,0.12);color:var(--cyan);margin:2px 4px 2px 0}
+.tag.warn{background:rgba(245,158,11,0.12);color:var(--amber)}
+.tag.danger{background:rgba(239,68,68,0.12);color:var(--red)}
+.tag.ok{background:rgba(16,185,129,0.12);color:var(--green)}
+.tag.gray{background:rgba(148,163,184,0.12);color:var(--muted)}
+/* ---------- buttons ---------- */
+.btn{background:rgba(34,211,238,0.10);border:1px solid var(--bd);color:var(--cyan);padding:8px 15px;border-radius:8px;cursor:pointer;font-size:13px;transition:.15s}
+.btn:hover{background:rgba(34,211,238,0.20)}
+.btn.solid{background:var(--cyan);color:#06202a;font-weight:600}
+.btn.solid:hover{filter:brightness(1.1)}
+.btn.warn{background:rgba(245,158,11,0.14);color:var(--amber);border-color:rgba(245,158,11,0.3)}
+.btn.danger{background:rgba(239,68,68,0.14);color:var(--red);border-color:rgba(239,68,68,0.3)}
+.btn.ghost{background:transparent;color:var(--muted)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btnrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+/* ---------- forms ---------- */
+label{display:block;font-size:12px;color:var(--muted);margin:9px 0 3px}
+input[type=number],input[type=text],input[type=password],input[type=search],select,textarea{width:100%;background:var(--pop);border:1px solid var(--bd);color:var(--txt);border-radius:6px;padding:8px 10px;font-size:13px;font-family:var(--mono)}
+textarea{font-family:'Segoe UI',sans-serif;resize:vertical;min-height:90px}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--cyan)}
+.row{display:flex;gap:10px;align-items:flex-start}
+.row>*{flex:1}
+/* ---------- table ---------- */
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed}
+th,td{padding:8px 9px;border-bottom:1px solid rgba(148,163,184,0.12);text-align:left;word-break:break-word}
+th{color:var(--muted);font-weight:600;font-size:12px}
+td.mono,.mono{font-family:var(--mono)}
+/* ---------- kv ---------- */
+.kv{display:flex;justify-content:space-between;font-family:var(--mono);font-size:12.5px;padding:3px 0;border-bottom:1px dashed rgba(148,163,184,0.1);}
+.kv b{color:var(--cyan);font-weight:600}
+/* ---------- upload dropzone ---------- */
+.dropzone{border:2px dashed var(--bd);border-radius:8px;padding:22px;text-align:center;color:var(--muted);cursor:pointer;transition:.15s;font-size:13px}
+.dropzone:hover,.dropzone.drag{border-color:var(--cyan);background:rgba(34,211,238,0.05);color:var(--cyan)}
+/* ---------- chart ---------- */
+.chart{width:100%;height:300px}
+.chart-sm{width:100%;height:220px}
+.chart-fallback{font-size:12px;color:var(--muted)}
+.fb-bar{display:flex;align-items:flex-end;gap:6px;height:160px;padding:10px 4px 0;border-bottom:1px solid var(--bd)}
+.fb-bar .col{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px}
+.fb-bar .bar{width:70%;background:linear-gradient(180deg,var(--cyan),rgba(34,211,238,0.2));border-radius:3px 3px 0 0}
+.fb-bar .lbl{font-size:10px;color:var(--muted);font-family:var(--mono)}
+/* ---------- disclaimer banner ---------- */
+.disc{background:rgba(245,158,11,0.10);border:1px solid rgba(245,158,11,0.35);border-left:4px solid var(--amber);border-radius:8px;padding:11px 14px;font-size:12.5px;color:#fcd34d;margin-bottom:16px;line-height:1.6}
+.disc.blue{background:rgba(34,211,238,0.08);border-color:rgba(34,211,238,0.3);border-left-color:var(--cyan);color:#a5f3fc}
+.disc.red{background:rgba(239,68,68,0.10);border-color:rgba(239,68,68,0.35);border-left-color:var(--red);color:#fca5a5}
+/* ---------- light ---------- */
+.light{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px;vertical-align:middle}
+.light.green{background:var(--green);box-shadow:0 0 8px var(--green)}
+.light.yellow{background:var(--amber);box-shadow:0 0 8px var(--amber)}
+.light.red{background:var(--red);box-shadow:0 0 8px var(--red)}
+/* ---------- toast ---------- */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--pop);border:1px solid var(--cyan);color:var(--txt);padding:11px 18px;border-radius:8px;z-index:999;opacity:0;pointer-events:none;transition:.25s;font-size:13px;max-width:90vw}
+#toast.show{opacity:1}
+#toast.err{border-color:var(--red)}
+/* ---------- modal ---------- */
+#modalMask{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:200;display:none;align-items:center;justify-content:center;padding:18px}
+#modalMask.show{display:flex}
+#modalBox{background:var(--card);border:1px solid var(--bd);border-radius:10px;max-width:680px;width:100%;max-height:85vh;overflow:auto;padding:20px}
+#modalTitle{font-size:16px;color:var(--cyan);margin-bottom:10px}
+#modalBody{font-size:13.5px;line-height:1.7}
+#modalBody table{margin-top:8px}
+/* ---------- chat / result output ---------- */
+.output{background:#0b1220;border:1px solid var(--bd);border-radius:8px;padding:14px;font-size:13px;line-height:1.7;white-space:pre-wrap;word-break:break-word;min-height:60px}
+.output .srcline{margin-top:10px;font-size:11.5px;color:var(--muted);border-top:1px dashed var(--bd);padding-top:8px}
+/* ---------- timeline list ---------- */
+.logitem{padding:9px 0;border-bottom:1px solid rgba(148,163,184,0.1);font-size:12.5px}
+.logitem .t{font-family:var(--mono);color:var(--muted)}
+/* ---------- qa list ---------- */
+.qitem{padding:10px 0;border-bottom:1px solid rgba(148,163,184,0.1)}
+.qitem .q{color:var(--txt);font-weight:600}
+.qitem .a{color:var(--muted);margin-top:3px}
+/* ---------- progress ---------- */
+.progbar{height:8px;background:var(--pop);border-radius:4px;overflow:hidden;margin-top:6px}
+.progbar .fill{height:100%;background:var(--cyan);transition:width .4s}
+/* ---------- role chips ---------- */
+.rolechip{padding:5px 12px;border-radius:16px;border:1px solid var(--bd);cursor:pointer;font-size:12.5px;color:var(--muted);background:transparent}
+.rolechip.active{color:var(--cyan);border-color:var(--cyan);background:rgba(34,211,238,0.1)}
+/* ---------- nav entry cards ---------- */
+.entry{cursor:pointer}
+.entry h3{color:var(--cyan);margin-bottom:4px}
+.entry .desc{font-size:12.5px;color:var(--muted)}
+/* ---------- responsive ---------- */
+@media (max-width:900px){.row{flex-direction:column}.row>*{flex:none}}
+@media (max-width:760px){nav{padding:0 8px}main{padding:68px 10px 30px}.chart{height:240px}}
+</style>
+</head>
+<body>
+<nav>
+  <span class="logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="2"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 15l3-4 3 2 3-5"/></svg>
+    AI 金融工作台
+  </span>
+  <button class="navbtn" data-nav="#dashboard">总览看板</button>
+  <button class="navbtn" data-nav="#research">智能投研</button>
+  <button class="navbtn" data-nav="#credit">信贷尽调</button>
+  <button class="navbtn" data-nav="#wealth">财富顾问</button>
+  <button class="navbtn" data-nav="#smefinance">小微财务</button>
+  <button class="navbtn" data-nav="#compliance">合规审计</button>
+  <button class="navbtn" data-nav="#knowledge">知识库</button>
+  <button class="navbtn" data-nav="#settings">系统设置</button>
+</nav>
+
+<main>
+<!-- ============ 总览看板 ============ -->
+<section data-view="dashboard">
+  <h1>AI 金融工作台 · 总览看板</h1>
+  <p class="sub">面向中小金融机构的 AI 辅助决策原型 · AI 只做分析与材料生成，不输出买卖 / 授信最终决策</p>
+  <div class="disc">⚠ 免责声明：本系统为原型演示，所有数据、结论与材料均由规则引擎或模板生成，<b>不构成任何投资建议、授信意见或买卖依据</b>。所有 AI 产出须经合规岗与业务人员人工复核后方可使用。</div>
+
+  <h2>系统运行状态</h2>
+  <div class="grid cards4" id="sysStatCards"></div>
+
+  <h2>中国 AI+金融市场概览</h2>
+  <div class="grid cards2">
+    <div class="card">
+      <h3 style="color:var(--cyan)">细分场景结构（2025E）</h3>
+      <div id="mktPie" class="chart"></div>
+      <p class="src">数据来源：清华大学五道口金融学院 / 行业研究报告整理；智能风控约 42%、智能投顾约 29%，其余为智能客服、合规科技、运营自动化等。</p>
+    </div>
+    <div class="card">
+      <h3 style="color:var(--cyan)">市场规模增长趋势</h3>
+      <div id="mktBar" class="chart"></div>
+      <p class="src">数据来源：新浪财经 / 每日经济新闻（2025 中国 AI+金融市场约 1.8 万亿元，2026E 突破 3 万亿元，CAGR&gt;30%）；IDC：2024 金融业 AI 投入 196.94 亿元，2027E 415.48 亿元。</p>
+    </div>
+  </div>
+
+  <h2>五大业务模块</h2>
+  <div class="grid cards3" id="entryCards"></div>
+
+  <h2>最近活动 / 审计日志摘要</h2>
+  <div class="card"><div id="dashLogs"></div><p class="src">全链路留痕：每次 AI 调用记录输入 / 输出 / 时间 / 操作人，详见「合规审计」视图。</p></div>
+  <p class="footer-note">本页面为原型演示数据，不代表任何真实机构经营状况。金融市场有风险，AI 辅助不替代专业判断。</p>
+</section>
+
+<!-- ============ 智能投研 ============ -->
+<section data-view="research">
+  <h1>智能投研辅助</h1>
+  <p class="sub">财报解析 · 研报对比 · 报告初稿生成 · 组合诊断 · 资讯聚合。AI 仅整理事实与提示风险，不输出买卖建议。</p>
+  <div class="disc blue">本视图所有财务数据来自上市公司公开年报（巨潮资讯网 / 上交所 / 深交所披露），AI 不预测股价、不推荐买入卖出。</div>
+
+  <h2>① 财报智能解析</h2>
+  <div class="panel">
+    <div class="dropzone" id="rdDrop">拖拽 PDF / 财报图片到此处，或点击选择文件<br><span style="font-size:11px">演示模式：文件不会真上传</span></div>
+    <div class="btnrow">
+      <button class="btn solid" id="btnLoadReport">加载示例财报（贵州茅台 600519）</button>
+      <button class="btn" id="btnLoadReport2">加载示例财报（宁德时代 300750）</button>
+      <button class="btn" id="btnLoadReport3">加载示例财报（招商银行 600036）</button>
+    </div>
+  </div>
+  <div id="rdResult"></div>
+
+  <h2>② 研报摘要与对比</h2>
+  <div class="panel">
+    <label>选择研报（可勾选 2-3 篇对比）</label>
+    <div id="rdChecks" style="margin:8px 0"></div>
+    <div class="btnrow"><button class="btn solid" id="btnCompare">生成对比摘要</button></div>
+    <div id="rdCompareOut" style="margin-top:12px"></div>
+  </div>
+
+  <h2>③ 个股 / 行业报告初稿生成</h2>
+  <div class="panel">
+    <div class="row">
+      <div><label>股票代码或行业关键词</label><input type="text" id="inReportTarget" placeholder="如 600519 / 白酒行业"></div>
+      <div style="flex:0.6"><label>主题</label>
+        <select id="selReportTheme"><option>基本面概览</option><option>行业景气度</option><option>财务质量诊断</option></select>
+      </div>
+    </div>
+    <div class="btnrow">
+      <button class="btn solid" id="btnGenReport">生成报告初稿</button>
+      <button class="btn" id="btnExportMd1" disabled>导出 Markdown</button>
+      <button class="btn" id="btnExportTxt1" disabled>导出文本</button>
+    </div>
+    <div id="genReportOut" class="output" style="margin-top:10px"></div>
+  </div>
+
+  <h2>④ 持仓组合诊断（仅诊断，不输出调仓指令）</h2>
+  <div class="panel">
+    <label>示例持仓（代码 : 市值万元，每行一条）</label>
+    <textarea id="holdingsTxt" style="min-height:70px">600519 : 120
+300750 : 80
+600036 : 60
+000858 : 30
+510300 : 40</textarea>
+    <div class="btnrow"><button class="btn solid" id="btnDiag">诊断组合</button></div>
+    <div id="diagOut" style="margin-top:12px"></div>
+    <div id="diagChart" class="chart" style="margin-top:10px"></div>
+  </div>
+
+  <h2>⑤ 资讯事件聚合</h2>
+  <div class="card"><div id="newsFeed"></div><p class="src">资讯为内置演示样例，事件分类由规则引擎标注，不构成投资依据。</p></div>
+</section>
+
+<!-- ============ 信贷尽调 ============ -->
+<section data-view="credit">
+  <h1>信贷尽调辅助</h1>
+  <p class="sub">材料解析 · 企业风险画像 · 尽调报告初稿 · 贷后舆情监控。AI 不输出授信 / 拒贷最终结论。</p>
+  <div class="disc red">⚠ 合规红线：本视图不输出「同意授信 / 拒绝授信」结论，所有风险等级为 AI 辅助判断，须由授信审批人独立决策。</div>
+
+  <h2>① 尽调材料解析</h2>
+  <div class="panel">
+    <div class="dropzone" id="crDrop">拖拽企业流水 / 合同 / 财报 / 裁判文书到此处（演示模式不上传）</div>
+    <div class="btnrow"><button class="btn solid" id="btnLoadEnt">加载示例企业数据（苏州某装备制造有限公司）</button></div>
+  </div>
+  <div id="crProfile"></div>
+
+  <h2>② 尽调报告初稿生成</h2>
+  <div class="panel">
+    <div class="btnrow">
+      <button class="btn solid" id="btnGenDD">一键生成尽调报告初稿</button>
+      <button class="btn" id="btnExportMd2" disabled>导出 Markdown</button>
+      <button class="btn" id="btnExportTxt2" disabled>导出文本</button>
+    </div>
+    <div id="ddOut" class="output" style="margin-top:10px"></div>
+  </div>
+
+  <h2>③ 贷后舆情监控</h2>
+  <div class="card"><div id="creditNews"></div><p class="src">舆情为演示样例，告警级别仅作提示，须人工核实后再决定是否启动现场检查。</p></div>
+</section>
+
+<!-- ============ 财富顾问 ============ -->
+<section data-view="wealth">
+  <h1>财富顾问工作台</h1>
+  <p class="sub">客户风险测评 · 资产配置初稿 · 合规话术助手 · 客户知识库。AI 不承诺收益、不预测涨跌。</p>
+  <div class="disc red">⚠ 合规红线：配置方案与话术均为初稿，外发客户前必须经合规复核；严禁承诺收益、保本保息、预测涨跌。</div>
+
+  <h2>① 客户风险承受能力测评</h2>
+  <div class="panel">
+    <div id="qzList"></div>
+    <div class="btnrow"><button class="btn solid" id="btnQz">提交测评</button><button class="btn ghost" id="btnQzReset">重置</button></div>
+    <div id="qzResult" style="margin-top:12px"></div>
+    <div id="qzRadar" class="chart" style="margin-top:10px"></div>
+  </div>
+
+  <h2>② 理财配置方案初稿</h2>
+  <div class="panel">
+    <div class="btnrow"><button class="btn solid" id="btnGenAlloc">基于测评生成配置初稿</button></div>
+    <div id="allocOut" style="margin-top:12px"></div>
+    <div id="allocPie" class="chart" style="margin-top:10px"></div>
+    <p class="src">标注：本方案为 AI 初稿，仅供参考，不构成投资建议，需人工复核后才能外发客户。</p>
+  </div>
+
+  <h2>③ 客户沟通话术助手</h2>
+  <div class="panel">
+    <label>输入客户问题 / 沟通场景</label>
+    <textarea id="inScript" placeholder="例如：客户问‘这只基金能不能保本？’"></textarea>
+    <div class="btnrow"><button class="btn solid" id="btnGenScript">生成合规话术</button></div>
+    <div id="scriptOut" class="output" style="margin-top:10px"></div>
+  </div>
+
+  <h2>④ 客户资料知识库（示例）</h2>
+  <div class="card"><div id="custList"></div></div>
+</section>
+
+<!-- ============ 小微财务 ============ -->
+<section data-view="smefinance">
+  <h1>小微企业财务分析</h1>
+  <p class="sub">银行流水解析 · 现金流预测 · 财务风险体检。AI 不输出授信结论，仅作经营健康度提示。</p>
+  <div class="disc blue">本视图基于企业自报流水进行归类与预测，数据口径未经审计；预测结果仅供参考。</div>
+
+  <h2>① 银行流水解析与自动归类</h2>
+  <div class="panel">
+    <div class="dropzone" id="smeDrop">上传 / 拖拽银行流水 CSV（演示模式不上传）</div>
+    <div class="btnrow"><button class="btn solid" id="btnLoadFlow">加载示例流水（近 12 个月）</button></div>
+    <div id="flowOut" style="margin-top:12px"></div>
+    <div id="flowChart" class="chart" style="margin-top:10px"></div>
+  </div>
+
+  <h2>② 未来 3-6 个月现金流预测</h2>
+  <div class="panel">
+    <div class="btnrow"><button class="btn solid" id="btnForecast">生成现金流预测</button></div>
+    <div id="fcOut" style="margin-top:12px"></div>
+    <div id="fcChart" class="chart" style="margin-top:10px"></div>
+    <p class="src">预测方法：基于近 12 个月月度均值 ± 波动区间线性外推，仅供参考，不代表实际发生。</p>
+  </div>
+
+  <h2>③ 财务风险体检</h2>
+  <div class="panel"><div id="healthOut"></div></div>
+</section>
+
+<!-- ============ 合规审计 ============ -->
+<section data-view="compliance">
+  <h1>合规审计辅助</h1>
+  <p class="sub">智能话术质检 · 业务记录归档 · 合规知识库查询。</p>
+  <div class="disc red">⚠ 智能质检仅做规则初筛，不替代合规人工审核；命中禁止话术的材料不得外发。</div>
+
+  <h2>① 智能质检（合同 / 宣传材料）</h2>
+  <div class="panel">
+    <label>粘贴待检测文本</label>
+    <textarea id="inCheck" placeholder="粘贴宣传材料 / 合同 / 话术文本…">本产品保本保息，年化收益稳定在 8% 以上，稳赚不赔，错过再等一年，建议您立即满仓买入。</textarea>
+    <div class="btnrow"><button class="btn solid" id="btnCheck">开始检测</button></div>
+    <div id="checkOut" style="margin-top:12px"></div>
+  </div>
+
+  <h2>② 业务记录归档（全链路留痕）</h2>
+  <div class="card"><div id="auditLog"></div><p class="src">记录字段：时间 / 操作人 / 模块 / AI 输入摘要 / 输出摘要 / 是否命中合规规则。</p></div>
+
+  <h2>③ 合规知识库检索</h2>
+  <div class="panel">
+    <label>输入关键词</label>
+    <input type="search" id="inLaw" placeholder="如：荐股、数据安全、AI 生成内容标识、适当性">
+    <div class="btnrow"><button class="btn solid" id="btnLaw">检索</button></div>
+    <div id="lawOut" style="margin-top:12px"></div>
+  </div>
+</section>
+
+<!-- ============ 知识库 ============ -->
+<section data-view="knowledge">
+  <h1>金融知识库（RAG 演示）</h1>
+  <p class="sub">监管文件 / 业务制度 / 行业报告入库 · 检索回答必引来源 · 无来源标注「请人工核实」。</p>
+  <div class="disc blue">演示模式：回答来自内置文档片段的关键词匹配，引用页码为示例编号；真实环境需对接向量库与文档解析管线。</div>
+
+  <h2>文档库</h2>
+  <div class="card"><div id="docList"></div></div>
+
+  <h2>问答演示</h2>
+  <div class="panel">
+    <label>向知识库提问</label>
+    <input type="search" id="inKbQ" placeholder="例如：金融营销宣传能不能承诺收益？">
+    <div class="btnrow"><button class="btn solid" id="btnKbAsk">提问</button></div>
+    <div id="kbOut" class="output" style="margin-top:10px"></div>
+  </div>
+
+  <h2>文档入库进度</h2>
+  <div class="card" id="ingestBox"></div>
+</section>
+
+<!-- ============ 系统设置 ============ -->
+<section data-view="settings">
+  <h1>系统设置</h1>
+  <p class="sub">模型管理 · 权限多租户 · 数据安全 · 关于系统。</p>
+
+  <h2>模型管理</h2>
+  <div class="panel">
+    <div class="row">
+      <div><label>模型提供商</label>
+        <select id="selModel">
+          <option value="demo">演示模式（本地规则引擎，无需 Key）</option>
+          <option value="deepseek">DeepSeek（OpenAI 兼容接口）</option>
+          <option value="kimi">Kimi / Moonshot</option>
+          <option value="qwen">通义千问（DashScope）</option>
+          <option value="wenxin">文心一言（ERNIE）</option>
+        </select>
+      </div>
+      <div><label>API Endpoint（可选，留空用默认）</label><input type="text" id="inEndpoint" placeholder="https://api.example.com/v1/chat/completions"></div>
+    </div>
+    <label>API Key（仅存浏览器 localStorage，绝不硬编码 / 不上传服务器）</label>
+    <input type="password" id="inApiKey" placeholder="sk-...">
+    <div class="btnrow">
+      <button class="btn solid" id="btnSaveKey">保存并切换模式</button>
+      <button class="btn" id="btnTestConn">连接测试</button>
+      <button class="btn danger" id="btnClearKey">清除 Key</button>
+    </div>
+    <p class="src">国产信创适配说明：所有模型均为国产大模型；可通过私有 Endpoint 对接机构内网私有化部署版本，数据不出域。</p>
+  </div>
+
+  <h2>权限与多租户（角色切换演示）</h2>
+  <div class="panel">
+    <div class="row" id="roleChips" style="gap:8px">
+      <button class="rolechip" data-role="admin">管理员</button>
+      <button class="rolechip" data-role="analyst">分析师</button>
+      <button class="rolechip" data-role="compliance">合规岗</button>
+      <button class="rolechip" data-role="rm">客户经理</button>
+    </div>
+    <div id="rolePerm" style="margin-top:12px"></div>
+  </div>
+
+  <h2>数据安全设置</h2>
+  <div class="panel">
+    <div class="kv"><span>数据不出域</span><b>已启用（本地 localStorage）</b></div>
+    <div class="kv"><span>私有化部署</span><b>支持（私有化 Endpoint）</b></div>
+    <div class="kv"><span>留痕日志</span><b id="kvLogCount">0 条</b></div>
+    <div class="btnrow"><button class="btn danger" id="btnWipe">清除本地存储（Key / 日志 / 偏好）</button></div>
+  </div>
+
+  <h2>关于系统</h2>
+  <div class="panel">
+    <div class="kv"><span>版本</span><b>v0.9.0-prototype</b></div>
+    <div class="kv"><span>形态</span><b>单文件自包含 HTML（原型）</b></div>
+    <div class="kv"><span>数据来源</span><b>上市公司公开年报 / 行业公开研报 / 内置演示数据</b></div>
+    <p class="src" style="margin-top:10px">完整免责声明：本系统为技术原型演示，不提供投资建议、不预测证券价格、不承诺任何收益、不构成授信或拒贷依据。任何 AI 生成内容均需专业人员人工复核。投资有风险，决策需谨慎。</p>
+  </div>
+</section>
+
+
+</main>
+<div id="toast"></div>
+<div id="modalMask"><div id="modalBox"><div id="modalTitle"></div><div id="modalBody"></div><div class="btnrow" style="justify-content:flex-end"><button class="btn" id="modalClose">关闭</button></div></div></div>
+<script>
+'use strict';
+/* ================= 基础工具 ================= */
+function $(s,r){return (r||document).querySelector(s);}
+function $$(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s));}
+function el(tag, cls, text){var e=document.createElement(tag); if(cls)e.className=cls; if(text!=null)e.textContent=text; return e;}
+function fmt(n,d){d=(d==null?2:d); return Number(n).toLocaleString('zh-CN',{minimumFractionDigits:d,maximumFractionDigits:d});}
+function nowStr(){var d=new Date(); function p(x){return (x<10?'0':'')+x;} return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds());}
+
+/* toast */
+var toastTimer=null;
+function toast(msg,isErr){var t=$('#toast'); t.textContent=msg; t.className=isErr?'err show':'show'; clearTimeout(toastTimer); toastTimer=setTimeout(function(){t.className='';},2600);}
+
+/* modal */
+function openModal(title, nodes){ $('#modalTitle').textContent=title; var b=$('#modalBody'); b.textContent=''; (Array.isArray(nodes)?nodes:[nodes]).forEach(function(n){b.appendChild(n);}); $('#modalMask').classList.add('show'); }
+$('#modalClose').addEventListener('click',function(){$('#modalMask').classList.remove('show');});
+$('#modalMask').addEventListener('click',function(e){ if(e.target===this)this.classList.remove('show');});
+
+/* 导出文件 */
+function downloadFile(name, text, mime){ mime=mime||'text/plain'; var blob=new Blob([text],{type:mime+';charset=utf-8'}); var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(a.href); toast('已导出：'+name); }
+
+/* 全链路留痕日志 */
+function getLogs(){ try{ return JSON.parse(localStorage.getItem('aif_logs')||'[]'); }catch(e){ return []; } }
+function addLog(module, inputSum, outputSum, blocked){
+  var logs=getLogs(); logs.unshift({time:nowStr(), op:State.user, module:module, in:String(inputSum||'').slice(0,120), out:String(outputSum||'').slice(0,120), blocked:!!blocked});
+  if(logs.length>200) logs.length=200;
+  try{ localStorage.setItem('aif_logs', JSON.stringify(logs)); }catch(e){}
+}
+
+/* ================= 全局状态 ================= */
+var State={
+  view:'dashboard',
+  user:'分析师·刘工',
+  role: localStorage.getItem('aif_role')||'analyst',
+  mode: 'demo',
+  lastReportMd:'',
+  lastDdMd:''
+};
+function detectMode(){ State.mode = (localStorage.getItem('aif_key')) ? 'llm' : 'demo'; }
+
+/* 角色 -> 模块权限 */
+var ROLE_PERM={
+  admin:    {name:'管理员', modules:['总览看板','智能投研','信贷尽调','财富顾问','小微财务','合规审计','知识库','系统设置']},
+  analyst:  {name:'分析师', modules:['总览看板','智能投研','小微财务','知识库']},
+  compliance:{name:'合规岗', modules:['总览看板','合规审计','知识库']},
+  rm:       {name:'客户经理', modules:['总览看板','财富顾问','小微财务','知识库']}
+};
+var NAV_HASH={dashboard:'总览看板',research:'智能投研',credit:'信贷尽调',wealth:'财富顾问',smefinance:'小微财务',compliance:'合规审计',knowledge:'知识库',settings:'系统设置'};
+function allowed(hash){ var m=NAV_HASH[hash]; return ROLE_PERM[State.role].modules.indexOf(m)>=0; }
+
+/* ================= 路由 ================= */
+function showView(hash){
+  hash=(hash||'#dashboard').replace('#','');
+  if(!NAV_HASH[hash]) hash='dashboard';
+  if(!allowed(hash)){ toast('当前角色（'+ROLE_PERM[State.role].name+'）无权访问该模块，已跳转总览', true); hash='dashboard'; }
+  State.view=hash;
+  $$('section[data-view]').forEach(function(s){ s.classList.toggle('active', s.getAttribute('data-view')===hash); });
+  $$('.navbtn').forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-nav')==='#'+hash); });
+  window.scrollTo(0,0);
+  if(hash==='dashboard') renderDashboard();
+  if(hash==='research') renderResearch();
+  if(hash==='credit') renderCredit();
+  if(hash==='wealth') renderWealth();
+  if(hash==='smefinance') renderSME();
+  if(hash==='compliance') renderCompliance();
+  if(hash==='knowledge') renderKnowledge();
+  if(hash==='settings') renderSettings();
+}
+function onHash(){ showView(location.hash); }
+window.addEventListener('hashchange', onHash);
+$$('.navbtn').forEach(function(b){ b.addEventListener('click', function(){ location.hash=b.getAttribute('data-nav'); }); });
+
+/* ================= 合规过滤层 ================= */
+var BANNED_PATTERNS=[
+  {re:/保本|保息|刚性兑付|刚兑|无风险/, label:'禁止承诺本金 / 收益保障（保本保息）'},
+  {re:/稳赚|必赚|包赚|零风险|没有风险|绝对安全/, label:'禁止「稳赚不赔」类绝对化表述'},
+  {re:/预测.{0,4}(涨|跌|牛市|熊市|点)|一定会涨|必涨|看涨|看跌|目标价/, label:'禁止预测证券涨跌 / 点位'},
+  {re:/立即买入|建议买入|强烈推荐|满仓买入|加仓|赶紧买/, label:'禁止直接给出买卖指令 / 荐股'},
+  {re:/年化.{0,3}[6-9]%|年化.{0,3}[1-9]\d%|收益.{0,4}稳/, label:'疑似承诺固定高收益'},
+  {re:/躺赚|躺赢|一本万利/, label:'夸大收益 / 诱导性表述'}
+];
+function scanCompliance(text){
+  var hits=[];
+  BANNED_PATTERNS.forEach(function(p){
+    var m=text.match(p.re);
+    if(m) hits.push({pattern:p.label, sample:m[0]});
+  });
+  return hits;
+}
+var DISCLAIMER={
+  general:'本内容由 AI 生成，仅供参考，不构成投资建议、授信决策依据或买卖要约。',
+  invest:'本内容由 AI 生成，仅供研究参考，不构成任何投资建议，不预测涨跌，市场有风险，决策需谨慎。',
+  credit:'本内容由 AI 生成，为尽调辅助材料初稿，须经授信审批人独立决策，不构成授信或拒贷结论。',
+  wealth:'本配置为 AI 初稿，不构成投资建议，不承诺收益，须经合规与人工复核后方可外发客户。'
+};
+function wrapWithDisclaimer(text,type){ return text+'\n\n—— '+DISCLAIMER[type||'general']; }
+
+/* ================= 图表（ECharts + 降级） ================= */
+function hasECharts(){ return (typeof echarts!=='undefined'); }
+function renderChart(id, option){
+  var dom=document.getElementById(id);
+  if(!dom) return;
+  if(hasECharts()){
+    try{
+      var c=echarts.init(dom, 'dark');
+      var base={backgroundColor:'transparent', textStyle:{color:'#94a3b8'}};
+      c.setOption(Object.assign(base, option));
+      return c;
+    }catch(e){ /* fall through */ }
+  }
+  /* 降级 CSS 柱状图 */
+  dom.innerHTML=''; dom.className='chart chart-fallback';
+  var title=el('div','','（ECharts 加载失败，降级展示）'); dom.appendChild(title);
+  if(option && option.series && option.series[0]){
+    var s=option.series[0];
+    var data=(s.data||[]).map(function(d){ return (typeof d==='object'&&d)?d.value:d; });
+    var cats=(option.xAxis&&option.xAxis[0]&&option.xAxis[0].data)||[];
+    var max=Math.max.apply(null, data.concat([1]));
+    var wrap=el('div','fb-bar');
+    data.forEach(function(v,i){
+      var col=el('div','col');
+      var bar=el('div','bar'); bar.style.height=Math.max(4,Math.round(v/max*140))+'px';
+      var lbl=el('div','lbl', cats[i]||(''+i));
+      col.appendChild(bar); col.appendChild(lbl); wrap.appendChild(col);
+    });
+    dom.appendChild(wrap);
+  }
+}
+window.addEventListener('resize', function(){ $$('[_echarts_instance_]').forEach(function(d){ try{ echarts.getInstanceByDom(d).resize(); }catch(e){} }); });
+
+/* ================= AI 引擎 ================= */
+var AIEngine={
+  mode:'demo',
+  /* 演示模式注册表：fn -> 生成器 */
+  registry:{},
+  register(fn, fnRun){ this.registry[fn]=fnRun; },
+  /* 统一入口：返回 Promise<string> */
+  async generate(prompt, ctx){
+    ctx=ctx||{};
+    var out;
+    if(this.mode==='llm'){
+      out=await this.callLLM(prompt, ctx);
+    }else{
+      if(this.registry[ctx.fn]) out=this.registry[ctx.fn](prompt, ctx);
+      else out='【演示模式】未为该功能注册模板，提示词：\n'+prompt;
+    }
+    /* 合规过滤 */
+    var hits=scanCompliance(out);
+    var blocked=hits.length>0;
+    if(blocked){
+      out=out+'\n\n[合规拦截] 输出命中 '+hits.length+' 条疑似禁止话术：'+hits.map(function(h){return h.pattern;}).join('；')+'。已自动追加免责声明，请人工复核。';
+    }
+    out=wrapWithDisclaimer(out, ctx.discType||'general');
+    addLog(ctx.module||ctx.fn||'AI', prompt, out, blocked);
+    return out;
+  },
+  async callLLM(prompt, ctx){
+    var key=localStorage.getItem('aif_key')||'';
+    var provider=localStorage.getItem('aif_provider')||'deepseek';
+    var ep=localStorage.getItem('aif_endpoint')||'';
+    var url=ep;
+    if(!url){
+      url={deepseek:'https://api.deepseek.com/v1/chat/completions', kimi:'https://api.moonshot.cn/v1/chat/completions',
+           qwen:'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', wenxin:'https://aip.baidubce.com'
+          }[provider]||'https://api.deepseek.com/v1/chat/completions';
+    }
+    try{
+      var resp=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+        body:JSON.stringify({model: ctx.model||'deepseek-chat', messages:[{role:'user',content:prompt}], temperature:0.3})});
+      if(!resp.ok) throw new Error('HTTP '+resp.status);
+      var j=await resp.json();
+      return j.choices && j.choices[0] ? j.choices[0].message.content : '（模型返回为空）';
+    }catch(e){
+      toast('模型调用失败，已降级为本地演示：'+e.message, true);
+      if(this.registry[ctx.fn]) return this.registry[ctx.fn](prompt, ctx);
+      return '【LLM 调用失败：'+e.message+'】请检查 Key / Endpoint / 网络。';
+    }
+  }
+};
+
+/* ================= 演示数据 ================= */
+/* 真实公开年报数据，来源：巨潮资讯网 / 上交所 / 深交所 / 公司官网 */
+var REPORTS={
+  moutai:{
+    name:'贵州茅台', code:'600519', period:'2024 年年报',
+    source:'数据来源：贵州茅台 2024 年年度报告（巨潮资讯网 / 上交所披露）',
+    metrics:[
+      {k:'营业收入', v:'1,708.99 亿元', yoy:'+15.71%', ok:1},
+      {k:'归母净利润', v:'862.28 亿元', yoy:'+15.38%', ok:1},
+      {k:'经营活动现金流净额', v:'924.64 亿元', yoy:'+38.85%', ok:1},
+      {k:'商誉', v:'约 0 元', yoy:'无大额商誉', ok:1},
+      {k:'股权质押', v:'控股股东未大额质押', yoy:'—', ok:1},
+      {k:'涉诉', v:'无重大未决诉讼披露', yoy:'—', ok:1}
+    ],
+    signals:[
+      {t:'现金流优异', cls:'ok', d:'经营现金流 924.6 亿 > 归母净利 862.3 亿，盈利现金含量高。'},
+      {t:'预收款稳定', cls:'ok', d:'合同负债（预收款）维持百亿量级，渠道蓄水池健康。'},
+      {t:'高端白酒需求观察', cls:'warn', d:'需关注批价走势与终端动销，本系统不预测价格。'}
+    ]
+  },
+  catl:{
+    name:'宁德时代', code:'300750', period:'2024 年年报',
+    source:'数据来源：宁德时代 2024 年年度报告（巨潮资讯网 / 公司官网披露）',
+    metrics:[
+      {k:'营业收入', v:'3,620.13 亿元', yoy:'-9.70%', ok:0},
+      {k:'归母净利润', v:'507.45 亿元', yoy:'+15.01%', ok:1},
+      {k:'经营活动现金流净额', v:'969.90 亿元', yoy:'+4.5%', ok:1},
+      {k:'资产负债率', v:'65.24%', yoy:'-4.10pct', ok:1},
+      {k:'商誉', v:'较小', yoy:'无重大并购商誉', ok:1},
+      {k:'股权质押', v:'控股股东低比例', yoy:'—', ok:1}
+    ],
+    signals:[
+      {t:'营收首次负增长', cls:'warn', d:'营收同比 -9.70%，主因碳酸锂价格下跌带动产品售价下行。'},
+      {t:'利润率逆势提升', cls:'ok', d:'归母净利 +15.01%，单位盈利质量改善，现金流充裕。'},
+      {t:'负债率下降', cls:'ok', d:'资产负债率 65.24%，较 2023 年末下降 4.10pct。'}
+    ]
+  },
+  cmb:{
+    name:'招商银行', code:'600036', period:'2024 年年报',
+    source:'数据来源：招商银行 2024 年年度报告（巨潮资讯网 / 上交所披露）',
+    metrics:[
+      {k:'营业收入', v:'3,374.88 亿元', yoy:'-0.48%', ok:0},
+      {k:'归母净利润', v:'1,483.91 亿元', yoy:'+1.22%', ok:1},
+      {k:'不良贷款率', v:'0.95%', yoy:'持平', ok:1},
+      {k:'拨备覆盖率', v:'411.98%', yoy:'-25.72pct', ok:0},
+      {k:'总资产', v:'12.15 万亿元', yoy:'+10.19%', ok:1},
+      {k:'涉诉', v:'无重大未决诉讼披露', yoy:'—', ok:1}
+    ],
+    signals:[
+      {t:'零售基本盘稳健', cls:'ok', d:'不良率 0.95% 持平，资产质量保持行业领先。'},
+      {t:'拨备消耗', cls:'warn', d:'拨备覆盖率 411.98%，同比下降 25.72pct，关注利润释放节奏。'},
+      {t:'营收微降', cls:'warn', d:'营收 -0.48%，净息差承压，需关注 LPR 与负债成本变化。'}
+    ]
+  }
+};
+
+/* 研报对比样例：事实 vs 券商预测 */
+var RESEARCH_REPORTS=[
+  {id:'r1', title:'白酒行业 2024 年报点评（事实摘录）', type:'事实', rows:['贵州茅台营收 1741.44 亿，同比 +15.66%','归母净利 862.28 亿，同比 +15.38%','合同负债维持百亿量级'], broker:'行业披露数据整理'},
+  {id:'r2', title:'某券商：白酒 2025 盈利预测（预测）', type:'预测', rows:['预测茅台 2025 营收约 1900 亿','预测行业销量个位数增长','建议关注高端龙头'], broker:'某券商研究所（预测，不代表本系统观点）'},
+  {id:'r3', title:'某券商：电池行业供需展望（预测）', type:'预测', rows:['预测 2025 年动力电池出货增速放缓','预测碳酸锂价格中枢企稳','关注海外储能需求'], broker:'某券商研究所（预测，不代表本系统观点）'}
+];
+
+/* 信贷示例企业 */
+var SAMPLE_ENT={
+  name:'苏州某装备制造有限公司（演示样例）',
+  legal:'张某某', regCap:'5,000 万元', estab:'2016-04',
+  risks:[
+    {cat:'司法风险', level:'中', title:'裁判文书 3 条（买卖合同纠纷）', src:'来源：中国裁判文书网近 3 年公开记录', d:'涉及标的合计约 280 万元，均为被告，无失信 / 被执行记录。'},
+    {cat:'司法风险', level:'低', title:'无失信 / 无被执行', src:'来源：执行信息公开网（演示查询）', d:'信用记录相对干净。'},
+    {cat:'经营风险', level:'中', title:'工商变更：近 12 月 2 次法定代表人 / 股权变更', src:'来源：国家企业信用信息公示系统', d:'频繁变更需关注实际控制人稳定性。'},
+    {cat:'经营风险', level:'低', title:'无行政处罚 / 无经营异常名录', src:'来源：国家企业信用信息公示系统', d:'合规记录良好。'},
+    {cat:'股权质押', level:'低', title:'股东质押比例约 12%', src:'来源：企业信用信息公示系统', d:'质押比例较低，风险可控。'}
+  ],
+  grade:'中风险（AI 初判，须人工复核）'
+};
+
+/* 财富客户样例 */
+var CUSTS=[
+  {id:'C001', name:'王女士', age:42, risk:'稳健型', asset:'320 万元', note:'已婚，子女教育 + 养老规划，厌恶大幅回撤。'},
+  {id:'C002', name:'李先生', age:35, risk:'成长型', asset:'180 万元', note:'互联网从业，收入稳定，可承受短期波动。'},
+  {id:'C003', name:'陈老伯', age:63, risk:'保守型', asset:'560 万元', note:'退休，本金安全优先，仅接受存款 / 国债类。'}
+];
+
+/* 合规知识库 */
+var LAWS=[
+  {t:'《证券期货投资者适当性管理办法》', s:'向客户销售产品须与其风险承受能力等级相匹配，不得向风险承受能力低的客户推介高风险产品。', page:'第 3-4 页'},
+  {t:'《关于规范金融营销宣传行为的通知》', s:'金融营销宣传不得对未来效果 / 收益作出保证性承诺，不得宣传「保本保息」「无风险」，不得预测证券价格。', page:'第 2 页'},
+  {t:'《生成式人工智能服务管理暂行办法》', s:'AI 生成内容应按规定进行标识，不得生成虚假信息、误导性内容；提供者应对服务进行安全评估。', page:'第 7 页'},
+  {t:'《个人信息保护法》', s:'处理个人金融信息须取得单独同意，遵循最小必要原则，不得超范围收集、不得违规跨境提供。', page:'第 9 页'},
+  {t:'《银行业金融机构外包风险管理指引》', s:'引入外部 AI 模型服务须评估数据安全与业务连续性，关键业务不得完全外包。', page:'第 5 页'}
+];
+
+/* RAG 文档库 */
+var DOCS=[
+  {name:'金融营销宣传合规手册.pdf', type:'监管文件', pages:24, status:'已入库', progress:100},
+  {name:'投顾业务适当性操作细则.docx', type:'业务制度', pages:12, status:'已入库', progress:100},
+  {name:'AI 辅助授信操作指引.pdf', type:'业务制度', pages:18, status:'已入库', progress:100},
+  {name:'2024 年银行业 AI 应用白皮书.pdf', type:'行业报告', pages:56, status:'解析中', progress:64},
+  {name:'客户数据分级分类规范.pdf', type:'监管文件', pages:9, status:'排队中', progress:8}
+];
+
+/* 资讯流 */
+var NEWS=[
+  {time:'09:42', cat:'行业政策', color:'warn', t:'监管就 AI 金融应用规范公开征求意见，强调可解释与留痕。'},
+  {time:'10:15', cat:'公司公告', color:'ok',   t:'某上市银行披露三季度不良率环比持平。'},
+  {time:'11:03', cat:'市场情绪', color:'amber',t:'白酒板块周度批价出现分化，机构观点分歧。'},
+  {time:'13:20', cat:'风险事件', color:'danger',t:'某城投平台非标展期传闻（未经证实，需交叉验证）。'},
+  {time:'14:05', cat:'宏观数据', color:'ok',   t:'公布当月社融 / M2 数据，结构符合预期。'}
+];
+
+/* 贷后舆情 */
+var CREDIT_NEWS=[
+  {level:'高', t:'目标企业被列为被执行人，执行标的约 420 万元。', src:'中国执行信息公开网 · 09-14 08:20'},
+  {level:'中', t:'下游主要客户拖欠货款，企业应收账款周转放缓。', src:'企业自述 / 供应链访谈 · 09-12'},
+  {level:'低', t:'企业通过高新技术企业重新认定，税收优惠延续。', src:'科技部门公示 · 09-10'}
+];
+
+/* ================= 演示模式模板生成器 ================= */
+/* 个股/行业报告初稿 */
+AIEngine.register('report', function(prompt, ctx){
+  var target=prompt.replace(/.*:|，|,/g,'').trim()||'600519';
+  var theme=ctx.theme||'基本面概览';
+  var r = REPORTS[target==='300750'?'catl':(target==='600036'?'cmb':'moutai')];
+  return ['# AI 研究报告初稿（'+theme+'）',
+    '标的 / 关键词：'+r.name+'（'+r.code+'）  报告期：'+r.period,
+    '',
+    '## 一、关键财务事实（来源：'+r.period+'公开披露）',
+    r.metrics.map(function(m){return '- '+m.k+'：'+m.v+'（同比 '+m.yoy+'）';}).join('\n'),
+    '',
+    '## 二、风险信号提示',
+    r.signals.map(function(s){return '- ['+s.cls+'] '+s.t+'：'+s.d;}).join('\n'),
+    '',
+    '## 三、需进一步核查事项',
+    '- 上述数据来自公开年报，未经独立审计复核；',
+    '- 建议结合季度跟踪数据与行业景气度交叉验证；',
+    '- 本报告不包含任何目标价、评级与买卖建议。',
+    '',
+    '数据来源：'+r.source].join('\n');
+});
+
+/* 尽调报告初稿 */
+AIEngine.register('dd', function(){
+  var e=SAMPLE_ENT;
+  return ['# 信贷尽调报告初稿（AI 生成，须人工复核）',
+    '企业：'+e.name+'  法人：'+e.legal+'  注册资本：'+e.regCap+'  成立：'+e.estab,
+    '',
+    '## 一、风险画像摘要',
+    '综合初判：'+e.grade,
+    '',
+    '## 二、分项风险',
+    e.risks.map(function(r){return '- ['+r.level+'] '+r.cat+'｜'+r.title+'：'+r.d+'（'+r.src+'）';}).join('\n'),
+    '',
+    '## 三、建议补充尽调动作（非授信结论）',
+    '- 实地走访经营场所，核对水电费 / 社保缴纳人数；',
+    '- 调取近 12 个月全部对公流水，验证经营收入真实性；',
+    '- 核实对外担保与关联交易情况。',
+    '',
+    '注：本初稿不构成授信 / 拒贷结论，须由授信审批人独立决策。'].join('\n');
+});
+
+/* 资产配置初稿 */
+AIEngine.register('alloc', function(prompt, ctx){
+  var p=ctx.profile||'稳健型';
+  var map={
+    '保守型':[['现金及存款',50],['国债 / 高等级信用债',35],['固收+',10],['权益类',5]],
+    '稳健型':[['现金及存款',25],['债券类',40],['固收+',20],['权益类',15]],
+    '平衡型':[['现金及存款',15],['债券类',35],['固收+',20],['权益类',30]],
+    '成长型':[['现金及存款',10],['债券类',25],['固收+',15],['权益类',50]],
+    '进取型':[['现金及存款',5],['债券类',15],['固收+',10],['权益类',70]]
+  };
+  var cfg=map[p]||map['稳健型'];
+  return ['# 资产配置初稿（风险画像：'+p+'）',
+    '建议比例（中枢，±5% 区间）：',
+    cfg.map(function(c){return '- '+c[0]+'：'+c[1]+'%';}).join('\n'),
+    '',
+    '说明：以上为基于风险测评的大类中枢，具体产品需结合客户现金流、期限、流动性需求另行匹配，并经合规复核。'].join('\n');
+});
+
+/* 合规话术 */
+AIEngine.register('script', function(prompt){
+  var q=prompt||'';
+  var ans='';
+  if(/保本|保息|不亏|稳赚|收益多少|能赚多少/.test(q)){
+    ans='「非常理解您对本金安全的关注。我们不会对任何产品做保本保息的承诺，也无法承诺具体收益。我们会根据您的风险测评结果，把产品的风险等级、历史回撤区间和费用结构如实告诉您，由您自主决策。您看方便先做一次风险测评吗？」';
+  }else if(/荐股|买什么|哪只好|推荐一下|哪只/.test(q)){
+    ans='「按照监管要求，我们不能直接推荐具体股票或产品。我可以为您整理相关产品的公开资料和风险等级说明，您结合自身判断后我们再一起讨论。」';
+  }else{
+    ans='「感谢您的提问。这个问题我需要先核实产品要素与您的风险匹配情况，避免给您不准确的信息。稍作整理后我会以书面形式回复您，并附上风险揭示。」';
+  }
+  return '【合规话术初稿】\n'+ans+'\n\n红线自检：未承诺收益 / 未预测涨跌 / 未荐股 / 已提示自主决策。';
+});
+
+/* 知识库问答 */
+AIEngine.register('kb', function(prompt){
+  var q=prompt||'';
+  var hit=LAWS.filter(function(l){ return (l.t+l.s).indexOf(q)>=0 || q && (l.t.indexOf(q)>=0 || l.s.indexOf(q)>=0); });
+  if(!hit.length){ /* 退化为关键词模糊匹配 */
+    var kw=q.replace(/[？?。\s]/g,'');
+    hit=LAWS.filter(function(l){ return kw && (l.t.indexOf(kw)>=0 || l.s.indexOf(kw)>=0 || l.s.indexOf(kw.slice(0,4))>=0); });
+  }
+  if(!hit.length) return '未在知识库中检索到直接来源，标注：【请人工核实】。建议扩展检索词或转人工咨询合规岗。';
+  return hit.slice(0,2).map(function(l){ return '依据《'+l.t+'》（来源文档第 '+l.page+'）：\n'+l.s; }).join('\n\n');
+});
+
+/* ================= 总览看板 ================= */
+var sysCharts=[];
+function renderDashboard(){
+  var modeTxt=State.mode==='llm'?'真实模型（LLM）':'演示模式（本地规则引擎）';
+  var cards=[
+    {k:'AI 引擎状态', v:modeTxt, small:'', light:(State.mode==='llm'?'green':'yellow')},
+    {k:'今日处理文档', v:'47', small:'份'},
+    {k:'风险预警', v:'3', small:'条', cls:'warn'},
+    {k:'合规拦截', v:'1', small:'次', cls:'danger'}
+  ];
+  var box=$('#sysStatCards'); box.textContent='';
+  cards.forEach(function(c){
+    var card=el('div','card');
+    card.appendChild(el('div','sub',c.k));
+    var st=el('div','stat');
+    if(c.cls==='warn') st.style.color='var(--amber)'; if(c.cls==='danger') st.style.color='var(--red)';
+    if(c.light){
+      st.appendChild(el('span','light '+c.light));
+      st.appendChild(document.createTextNode(c.v));
+    }else{
+      st.textContent=c.v;
+    }
+    if(c.small){var sm=el('small','',c.small); st.appendChild(sm);}
+    card.appendChild(st);
+    box.appendChild(card);
+  });
+
+  /* 入口卡片 */
+  var entries=[
+    {h:'智能投研', d:'财报解析 / 研报对比 / 报告初稿 / 组合诊断', hash:'#research', tag:'分析师'},
+    {h:'信贷尽调', d:'企业风险画像 / 尽调初稿 / 贷后舆情', hash:'#credit', tag:'风控'},
+    {h:'财富顾问', d:'风险测评 / 配置初稿 / 合规话术', hash:'#wealth', tag:'客户经理'},
+    {h:'小微财务', d:'流水归类 / 现金流预测 / 风险体检', hash:'#smefinance', tag:'普惠'},
+    {h:'合规审计', d:'话术质检 / 全链路留痕 / 法规检索', hash:'#compliance', tag:'合规'}
+  ];
+  var eb=$('#entryCards'); eb.textContent='';
+  entries.forEach(function(e){
+    var card=el('div','card entry');
+    card.appendChild(el('h3','',e.h));
+    card.appendChild(el('div','desc',e.d));
+    card.appendChild(el('span','tag',e.tag));
+    card.addEventListener('click',function(){ if(allowed(e.h)) location.hash=e.hash; else toast('当前角色无权访问「'+e.h+'」',true); });
+    eb.appendChild(card);
+  });
+
+  /* 审计日志摘要 */
+  var logs=getLogs().slice(0,6);
+  var lb=$('#dashLogs'); lb.textContent='';
+  if(!logs.length){ lb.appendChild(el('div','sub','暂无 AI 调用记录，前往任一功能生成内容后将自动留痕。')); }
+  logs.forEach(function(l){
+    var it=el('div','logitem');
+    var t=el('span','t',l.time+' ｜ '+l.op+' ｜ '+l.module+(l.blocked?' ｜ ⚠合规拦截':''));
+    it.appendChild(t); it.appendChild(el('div','','输入：'+l.in));
+    lb.appendChild(it);
+  });
+
+  /* 图表 */
+  sysCharts.forEach(function(c){ try{c.dispose();}catch(e){} }); sysCharts=[];
+  if(hasECharts()){
+    try{
+      sysCharts.push(echarts.init($('#mktPie'),'dark'));
+      sysCharts[sysCharts.length-1].setOption({backgroundColor:'transparent',
+        tooltip:{}, legend:{bottom:0,textStyle:{color:'#94a3b8'}},
+        series:[{type:'pie',radius:['40%','68%'],data:[
+          {value:42,name:'智能风控'},{value:29,name:'智能投顾'},{value:14,name:'智能客服'},{value:9,name:'合规科技'},{value:6,name:'运营自动化'}
+        ],label:{color:'#e2e8f0'}}]});
+      sysCharts.push(echarts.init($('#mktBar'),'dark'));
+      sysCharts[sysCharts.length-1].setOption({backgroundColor:'transparent',
+        tooltip:{}, grid:{left:40,right:16,top:20,bottom:30},
+        xAxis:{type:'category',data:['2023','2024','2025E','2026E'],axisLabel:{color:'#94a3b8'}},
+        yAxis:{type:'value',name:'万亿元',axisLabel:{color:'#94a3b8'}},
+        series:[{type:'bar',data:[1.0,1.35,1.8,3.0],itemStyle:{color:'#22d3ee'},barWidth:'46%'}]});
+    }catch(e){}
+  }else{
+    renderChart('mktPie',{series:[{data:[42,29,14,9,6]}]});
+    renderChart('mktBar',{xAxis:[{data:['23','24','25E','26E']}],series:[{data:[1.0,1.35,1.8,3.0]}]});
+  }
+}
+
+/* ================= 智能投研视图 ================= */
+var rdCharts=[];
+function reportMetricsCard(r){
+  var wrap=el('div','grid cards3');
+  r.metrics.forEach(function(m){
+    var c=el('div','card');
+    c.appendChild(el('div','sub',m.k));
+    var v=el('div','stat'); v.textContent=m.v; c.appendChild(v);
+    var cls=m.ok? (m.yoy.indexOf('+')===0?'delta-up':'') : 'delta-down';
+    c.appendChild(el('div',cls||'','同比 '+m.yoy));
+    wrap.appendChild(c);
+  });
+  return wrap;
+}
+function loadReport(key){
+  var r=REPORTS[key];
+  var box=$('#rdResult'); box.textContent='';
+  var head=el('div','panel');
+  head.appendChild(el('h3','',r.name+'（'+r.code+'） · '+r.period));
+  head.appendChild(reportMetricsCard(r));
+  var sig=el('div','btnrow'); 
+  r.signals.forEach(function(s){ sig.appendChild(el('span','tag '+s.cls,s.t+'：'+s.d)); });
+  head.appendChild(sig);
+  head.appendChild(el('p','src',r.source));
+  box.appendChild(head);
+  addLog('财报解析',r.name+' '+r.period,'指标卡片已生成 '+r.metrics.length+' 项',false);
+  toast('已解析：'+r.name);
+}
+function renderResearch(){
+  /* 研报勾选 */
+  var c=$('#rdChecks'); c.textContent='';
+  RESEARCH_REPORTS.forEach(function(rp){
+    var lbl=el('label','',''); lbl.style.cssText='display:flex;align-items:center;gap:6px;color:var(--txt);font-size:13px';
+    var cb=document.createElement('input'); cb.type='checkbox'; cb.value=rp.id; cb.checked=(rp.id==='r1'||rp.id==='r2');
+    lbl.appendChild(cb); lbl.appendChild(el('span','',rp.title));
+    lbl.appendChild(el('span','tag '+(rp.type==='事实'?'ok':'warn'),rp.type));
+    c.appendChild(lbl);
+  });
+  /* 资讯流 */
+  var nf=$('#newsFeed'); nf.textContent='';
+  NEWS.forEach(function(n){
+    var it=el('div','logitem');
+    it.appendChild(el('span','t',n.time));
+    it.appendChild(el('span','tag '+(n.color||'gray'),n.cat));
+    it.appendChild(el('div','',n.t));
+    nf.appendChild(it);
+  });
+}
+/* 事件绑定（只绑一次） */
+function bindResearch(){
+  $('#btnLoadReport').addEventListener('click',function(){loadReport('moutai');});
+  $('#btnLoadReport2').addEventListener('click',function(){loadReport('catl');});
+  $('#btnLoadReport3').addEventListener('click',function(){loadReport('cmb');});
+  $('#rdDrop').addEventListener('click',function(){ toast('演示模式：请点击「加载示例财报」', false); });
+  $('#rdDrop').addEventListener('dragover',function(e){e.preventDefault(); this.classList.add('drag');});
+  $('#rdDrop').addEventListener('dragleave',function(){this.classList.remove('drag');});
+  $('#rdDrop').addEventListener('drop',function(e){e.preventDefault(); this.classList.remove('drag'); toast('演示模式：文件不上传，请用示例数据',false);});
+
+  $('#btnCompare').addEventListener('click',function(){
+    var sel=$$('#rdChecks input:checked').map(function(i){return i.value;});
+    var out=$('#rdCompareOut'); out.textContent='';
+    if(sel.length<2){ toast('请至少勾选 2 篇研报',true); return; }
+    var card=el('div','panel');
+    card.appendChild(el('h3','','研报对比（事实 vs 券商预测）'));
+    var tbl=document.createElement('table');
+    tbl.innerHTML='<colgroup><col style="width:22%"><col><col style="width:16%"></colgroup>';
+    var thead=document.createElement('thead'); thead.innerHTML='<tr><th>研报</th><th>核心观点</th><th>性质</th></tr>'; tbl.appendChild(thead);
+    var tb=document.createElement('tbody');
+    sel.forEach(function(id){
+      var rp=RESEARCH_REPORTS.filter(function(x){return x.id===id;})[0]; if(!rp)return;
+      var tr=document.createElement('tr');
+      tr.appendChild(el('td','',rp.title));
+      tr.appendChild(el('td','',rp.rows.join('；')));
+      var td=el('td','',''); td.appendChild(el('span','tag '+(rp.type==='事实'?'ok':'warn'),rp.type));
+      tr.appendChild(td); tb.appendChild(tr);
+    });
+    tbl.appendChild(tb); card.appendChild(tbl);
+    card.appendChild(el('p','src','事实来自公开披露；预测为券商观点，不代表本系统立场，不构成投资建议。'));
+    out.appendChild(card);
+    addLog('研报对比','勾选 '+sel.length+' 篇','对比表已生成',false);
+  });
+
+  $('#btnGenReport').addEventListener('click',async function(){
+    var target=$('#inReportTarget').value.trim()||'600519';
+    var theme=$('#selReportTheme').value;
+    var out=$('#genReportOut'); out.textContent='生成中…';
+    var md=await AIEngine.generate('标的：'+target+'，主题：'+theme,{fn:'report',discType:'invest',module:'报告生成',theme:theme});
+    out.textContent=md; State.lastReportMd=md;
+    $('#btnExportMd1').disabled=false; $('#btnExportTxt1').disabled=false;
+    toast('报告初稿已生成');
+  });
+  $('#btnExportMd1').addEventListener('click',function(){ downloadFile('研究报告初稿.md',State.lastReportMd,'text/markdown'); });
+  $('#btnExportTxt1').addEventListener('click',function(){ downloadFile('研究报告初稿.txt',State.lastReportMd,'text/plain'); });
+
+  $('#btnDiag').addEventListener('click',function(){
+    var lines=$('#holdingsTxt').value.split('\n').filter(function(x){return x.trim();});
+    var rows=[]; var total=0;
+    lines.forEach(function(l){
+      var m=l.split(':'); if(m.length<2)return;
+      var code=m[0].trim(); var w=parseFloat(m[1])||0; total+=w;
+      rows.push({code:code,w:w});
+    });
+    var out=$('#diagOut'); out.textContent='';
+    if(!rows.length){ toast('未识别到持仓',true); return; }
+    var card=el('div','panel');
+    card.appendChild(el('h3','','组合诊断结果（仅诊断，不输出调仓指令）'));
+    var tbl=document.createElement('table');
+    tbl.innerHTML='<colgroup><col style="width:30%"><col><col><col style="width:26%"></colgroup>';
+    tbl.innerHTML+='<thead><tr><th>代码</th><th>市值(万)</th><th>占比</th><th>诊断提示</th></tr></thead>';
+    var tb=document.createElement('tbody');
+    rows.forEach(function(r){
+      var pct=r.w/total*100;
+      var note = pct>30? '单一个股集中度偏高' : (pct>20? '集中度适中' : '分散');
+      var tr=document.createElement('tr');
+      tr.appendChild(el('td','mono',r.code));
+      tr.appendChild(el('td','mono',fmt(r.w,1)));
+      tr.appendChild(el('td','mono',pct.toFixed(1)+'%'));
+      tr.appendChild(el('td','',note));
+      tb.appendChild(tr);
+    });
+    tbl.appendChild(tb); card.appendChild(tbl);
+    var top=rows.slice().sort(function(a,b){return b.w-a.w;})[0];
+    var hhi=rows.reduce(function(s,r){var p=r.w/total*100;return s+p*p;},0);
+    card.appendChild(el('div','btnrow',''));
+    card.appendChild(el('span','tag warn','前十大/第一大权重：'+(top.w/total*100).toFixed(1)+'%'));
+    card.appendChild(el('span','tag gray','集中度 HHI：'+hhi.toFixed(0)+'（>2000 偏集中）'));
+    card.appendChild(el('span','tag ok','风格暴露：偏大盘价值+新能源成长（演示估计）'));
+    card.appendChild(el('p','src','相关性矩阵为演示估算，未输出任何买卖 / 调仓指令；集中度仅作提示。'));
+    out.appendChild(card);
+    /* 饼图 */
+    rdCharts.forEach(function(c){try{c.dispose();}catch(e){}}); rdCharts=[];
+    if(hasECharts()){
+      try{ rdCharts.push(echarts.init($('#diagChart'),'dark'));
+        rdCharts[0].setOption({backgroundColor:'transparent',tooltip:{},legend:{bottom:0,textStyle:{color:'#94a3b8'}},
+          series:[{type:'pie',radius:['35%','65%'],data:rows.map(function(r){return {name:r.code,value:r.w};}),label:{color:'#e2e8f0'}}]});
+      }catch(e){}
+    }
+  });
+}
+
+/* ================= 信贷尽调视图 ================= */
+function renderCredit(){
+  var box=$('#crProfile'); box.textContent='';
+  var out=$('#creditNews'); out.textContent='';
+  CREDIT_NEWS.forEach(function(n){
+    var it=el('div','logitem');
+    var cls=n.level==='高'?'danger':(n.level==='中'?'warn':'ok');
+    it.appendChild(el('span','tag '+cls,'告警·'+n.level));
+    it.appendChild(el('div','',n.t));
+    it.appendChild(el('div','t',n.src));
+    out.appendChild(it);
+  });
+}
+function bindCredit(){
+  $('#btnLoadEnt').addEventListener('click',function(){
+    var e=SAMPLE_ENT;
+    var box=$('#crProfile'); box.textContent='';
+    var card=el('div','panel');
+    card.appendChild(el('h3','',e.name));
+    card.appendChild(el('div','kv',''));
+    [['法定代表人',e.legal],['注册资本',e.regCap],['成立日期',e.estab]].forEach(function(p){
+      var k=el('div','kv'); k.appendChild(el('span','',p[0])); k.appendChild(el('b','',p[1])); card.appendChild(k);
+    });
+    card.appendChild(el('div','btnrow',''));
+    card.appendChild(el('span','tag danger',e.grade));
+    e.risks.forEach(function(r){
+      var row=el('div','logitem');
+      var lv=r.level==='高'?'danger':(r.level==='中'?'warn':'ok');
+      row.appendChild(el('span','tag '+lv,r.cat+'·'+r.level));
+      var t=el('div','',r.title+'：'+r.d); row.appendChild(t);
+      row.appendChild(el('div','t','证据来源：'+r.src));
+      card.appendChild(row);
+    });
+    card.appendChild(el('p','src','风险等级为 AI 初判，每条风险均附证据来源，须人工复核，不构成授信 / 拒贷结论。'));
+    box.appendChild(card);
+    addLog('尽调解析',e.name,'风险画像已生成，综合等级：'+e.grade,false);
+    toast('已加载示例企业风险画像');
+  });
+  $('#crDrop').addEventListener('click',function(){ toast('演示模式：请点击「加载示例企业数据」',false); });
+  $('#btnGenDD').addEventListener('click',async function(){
+    var out=$('#ddOut'); out.textContent='生成中…';
+    var md=await AIEngine.generate('生成 '+SAMPLE_ENT.name+' 尽调报告初稿',{fn:'dd',discType:'credit',module:'尽调报告'});
+    out.textContent=md; State.lastDdMd=md;
+    $('#btnExportMd2').disabled=false; $('#btnExportTxt2').disabled=false;
+    toast('尽调报告初稿已生成');
+  });
+  $('#btnExportMd2').addEventListener('click',function(){ downloadFile('尽调报告初稿.md',State.lastDdMd,'text/markdown'); });
+  $('#btnExportTxt2').addEventListener('click',function(){ downloadFile('尽调报告初稿.txt',State.lastDdMd,'text/plain'); });
+}
+
+/* ================= 财富顾问视图 ================= */
+var QUIZ=[
+  {q:'您的投资期限通常是？', opts:['1 年以内','1-3 年','3-5 年','5 年以上'], w:[1,2,3,4]},
+  {q:'您能接受的最大短期浮亏是？', opts:['本金不能亏','5% 以内','5%-15%','15% 以上'], w:[1,2,3,4]},
+  {q:'您的家庭年收入稳定性？', opts:['不稳定','一般','较稳定','非常稳定'], w:[1,2,3,4]},
+  {q:'您过去主要投资过？', opts:['存款/国债','银行理财','基金/股票','衍生品/杠杆'], w:[1,2,3,4]},
+  {q:'这笔钱多久内可能要用？', opts:['随时要用','1 年内','1-3 年','3 年以上不用'], w:[1,2,3,4]}
+];
+var WEALTH_RADAR=null;
+function renderWealth(){
+  var l=$('#qzList'); l.textContent='';
+  QUIZ.forEach(function(item,qi){
+    l.appendChild(el('label','',(qi+1)+'. '+item.q));
+    item.opts.forEach(function(op,oi){
+      var id='q_'+qi+'_'+oi;
+      var lbl=el('label','',''); lbl.style.cssText='display:flex;align-items:center;gap:6px;color:var(--txt);font-size:13px;font-weight:400';
+      var rb=document.createElement('input'); rb.type='radio'; rb.name='q_'+qi; rb.value=item.w[oi];
+      lbl.appendChild(rb); lbl.appendChild(el('span','',op));
+      l.appendChild(lbl);
+    });
+  });
+  /* 客户列表 */
+  var cl=$('#custList'); cl.textContent='';
+  CUSTS.forEach(function(c){
+    var row=el('div','logitem');
+    row.appendChild(el('span','mono','['+c.id+'] '));
+    row.appendChild(el('b','',c.name+'（'+c.age+' 岁）'));
+    row.appendChild(el('span','tag',c.risk));
+    row.appendChild(el('span','tag gray','资产 '+c.asset));
+    row.appendChild(el('div','','备注：'+c.note));
+    row.style.cursor='pointer';
+    row.addEventListener('click',function(){
+      openModal('客户详情 · '+c.name, [
+        (function(){var k=el('div','kv');k.appendChild(el('span','客户编号'));k.appendChild(el('b','',c.id));return k;})(),
+        (function(){var k=el('div','kv');k.appendChild(el('span','年龄'));k.appendChild(el('b','',c.age+' 岁'));return k;})(),
+        (function(){var k=el('div','kv');k.appendChild(el('span','风险等级'));k.appendChild(el('b','',c.risk));return k;})(),
+        (function(){var k=el('div','kv');k.appendChild(el('span','金融资产'));k.appendChild(el('b','',c.asset));return k;})(),
+        el('p','src','备注：'+c.note)
+      ]);
+    });
+    cl.appendChild(row);
+  });
+}
+function bindWealth(){
+  $('#btnQz').addEventListener('click',function(){
+    var score=0, ans=0;
+    QUIZ.forEach(function(item,qi){
+      var sel=document.querySelector('input[name="q_'+qi+'"]:checked');
+      if(sel){ score+=parseInt(sel.value,10); ans++; }
+    });
+    var res=$('#qzResult'); res.textContent='';
+    if(ans<QUIZ.length){ toast('请完成全部 '+QUIZ.length+' 道题',true); return; }
+    var type;
+    if(score<=7) type='保守型'; else if(score<=11) type='稳健型'; else if(score<=15) type='平衡型'; else if(score<=19) type='成长型'; else type='进取型';
+    State.riskProfile=type;
+    res.appendChild(el('div','btnrow',''));
+    res.appendChild(el('span','tag ok','测评完成：风险承受能力 = '+type+'（得分 '+score+'/'+(QUIZ.length*4)+'）'));
+    /* 雷达图 */
+    if(hasECharts()){
+      try{ if(WEALTH_RADAR)WEALTH_RADAR.dispose();
+        WEALTH_RADAR=echarts.init($('#qzRadar'),'dark');
+        var map={'保守型':[2,1,1,1,2],'稳健型':[3,2,2,2,3],'平衡型':[3,3,3,3,3],'成长型':[4,4,3,4,4],'进取型':[5,5,4,5,5]};
+        WEALTH_RADAR.setOption({backgroundColor:'transparent',
+          radar:{indicator:[{name:'流动性需求',max:5},{name:'亏损容忍',max:5},{name:'投资经验',max:5},{name:'期限容忍',max:5},{name:'收入稳定',max:5}],
+            splitArea:{areaStyle:{color:['rgba(34,211,238,0.03)','rgba(34,211,238,0.06)']}},axisName:{color:'#94a3b8'}},
+          series:[{type:'radar',data:[{value:map[type],name:type,areaStyle:{color:'rgba(34,211,238,0.3)'}}]}]});
+      }catch(e){}
+    }
+    addLog('风险测评','得分 '+score,'画像：'+type,false);
+  });
+  $('#btnQzReset').addEventListener('click',function(){ $$('#qzList input').forEach(function(i){i.checked=false;}); $('#qzResult').textContent=''; if(WEALTH_RADAR){WEALTH_RADAR.clear();} });
+
+  $('#btnGenAlloc').addEventListener('click',async function(){
+    var p=State.riskProfile||'稳健型';
+    var out=$('#allocOut'); out.textContent='生成中…';
+    var md=await AIEngine.generate('风险画像：'+p,{fn:'alloc',discType:'wealth',module:'资产配置',profile:p});
+    out.textContent=md;
+    var map={'保守型':[50,35,10,5],'稳健型':[25,40,20,15],'平衡型':[15,35,20,30],'成长型':[10,25,15,50],'进取型':[5,15,10,70]};
+    var labels=['现金及存款','债券类','固收+','权益类'];
+    var data=(map[p]||map['稳健型']).map(function(v,i){return {name:labels[i],value:v};});
+    if(hasECharts()){
+      try{ var c=echarts.init($('#allocPie'),'dark');
+        c.setOption({backgroundColor:'transparent',tooltip:{},legend:{bottom:0,textStyle:{color:'#94a3b8'}},
+          series:[{type:'pie',radius:['40%','68%'],data:data,label:{color:'#e2e8f0',formatter:'{b} {c}%'}}]});
+      }catch(e){}
+    }
+    toast('配置初稿已生成（须合规复核）');
+  });
+
+  $('#btnGenScript').addEventListener('click',async function(){
+    var q=$('#inScript').value.trim();
+    if(!q){ toast('请输入客户问题',true); return; }
+    var out=$('#scriptOut'); out.textContent='生成中…';
+    var md=await AIEngine.generate(q,{fn:'script',discType:'wealth',module:'话术助手'});
+    out.textContent=md;
+  });
+}
+
+/* ================= 小微财务视图 ================= */
+var SME={flowLoaded:false};
+var MONTHS=['25-01','25-02','25-03','25-04','25-05','25-06','25-07','25-08','25-09','25-10','25-11','25-12'];
+var INCOME=[42,45,41,48,52,49,55,58,54,60,62,59];   // 经营收入（万元）
+var EXPENSE=[30,32,31,34,36,35,38,40,37,41,42,40];   // 经营支出
+function renderSME(){}
+function bindSME(){
+  $('#btnLoadFlow').addEventListener('click',function(){
+    SME.flowLoaded=true;
+    var out=$('#flowOut'); out.textContent='';
+    var card=el('div','panel');
+    card.appendChild(el('h3','','自动归类结果（近 12 个月，单位：万元）'));
+    var totalI=INCOME.reduce(function(a,b){return a+b;},0), totalE=EXPENSE.reduce(function(a,b){return a+b;},0);
+    [['经营收入',totalI],['经营支出',totalE],['工资（估算）',totalE*0.28],['税费（估算）',totalE*0.12],['还贷（估算）',18],['其他',(totalI-totalE)*0.15]]
+      .forEach(function(r){ var k=el('div','kv'); k.appendChild(el('span','',r[0])); k.appendChild(el('b','',fmt(r[1],1))); card.appendChild(k); });
+    card.appendChild(el('p','src','归类为演示规则估算，实际需以企业回单 / 合同匹配为准。'));
+    out.appendChild(card);
+    if(hasECharts()){
+      try{ var c=echarts.init($('#flowChart'),'dark');
+        c.setOption({backgroundColor:'transparent',tooltip:{trigger:'axis'},legend:{textStyle:{color:'#94a3b8'}},
+          grid:{left:42,right:16,top:30,bottom:30},
+          xAxis:{type:'category',data:MONTHS,axisLabel:{color:'#94a3b8'}},
+          yAxis:{type:'value',axisLabel:{color:'#94a3b8'}},
+          series:[{name:'收入',type:'line',smooth:true,data:INCOME,itemStyle:{color:'#10b981'}},{name:'支出',type:'line',smooth:true,data:EXPENSE,itemStyle:{color:'#ef4444'}}]});
+      }catch(e){}
+    }
+    addLog('流水解析','示例 12 个月流水','已自动归类',false);
+    toast('示例流水已加载并归类');
+  });
+  $('#smeDrop').addEventListener('click',function(){ toast('演示模式：请点击「加载示例流水」',false); });
+
+  $('#btnForecast').addEventListener('click',function(){
+    if(!SME.flowLoaded){ toast('请先加载示例流水',true); return; }
+    var out=$('#fcOut'); out.textContent='';
+    var last=INCOME[INCOME.length-1];
+    var avg=INCOME.reduce(function(a,b){return a+b;},0)/INCOME.length;
+    var fut=[1,2,3,4,5,6].map(function(i){ return +(last+ (avg-last)*0.4 + i*0.8).toFixed(1); });
+    var card=el('div','panel');
+    card.appendChild(el('h3','','未来 6 个月经营现金流入预测（仅供参考）'));
+    fut.forEach(function(v,i){ var k=el('div','kv'); k.appendChild(el('span','',('26-0'+(i+1)))); k.appendChild(el('b','',fmt(v,1)+' 万元')); card.appendChild(k); });
+    card.appendChild(el('p','src','预测方法：近 12 月均值与最近值加权线性外推，未考虑季节性 / 订单波动，仅供参考。'));
+    out.appendChild(card);
+    if(hasECharts()){
+      try{ var c=echarts.init($('#fcChart'),'dark');
+        var hist=MONTHS.map(function(m,i){return [m,INCOME[i]];});
+        var futLbl=['26-01','26-02','26-03','26-04','26-05','26-06'];
+        var bandLo=fut.map(function(v){return +(v*0.9).toFixed(1);}), bandHi=fut.map(function(v){return +(v*1.1).toFixed(1);});
+        c.setOption({backgroundColor:'transparent',tooltip:{trigger:'axis'},legend:{textStyle:{color:'#94a3b8'}},
+          grid:{left:42,right:16,top:30,bottom:30},
+          xAxis:{type:'category',data:MONTHS.concat(futLbl),axisLabel:{color:'#94a3b8'}},
+          yAxis:{type:'value',axisLabel:{color:'#94a3b8'}},
+          series:[
+            {name:'实际收入',type:'line',smooth:true,data:INCOME.concat([null,null,null,null,null,null]),itemStyle:{color:'#10b981'}},
+            {name:'预测中枢',type:'line',smooth:true,lineStyle:{type:'dashed',color:'#f59e0b'},data:Array(11).fill(null).concat([INCOME[11]]).concat(fut),itemStyle:{color:'#f59e0b'}},
+            {name:'预测下限',type:'line',smooth:true,lineStyle:{opacity:0},stack:'band',data:Array(11).fill(null).concat([INCOME[11]*0.9]).concat(bandLo),tooltip:{show:false}},
+            {name:'预测区间',type:'line',smooth:true,lineStyle:{opacity:0},areaStyle:{color:'rgba(245,158,11,0.12)',opacity:0.5},stack:'band',data:Array(11).fill(0).concat([INCOME[11]*0.1]).concat(fut.map(function(v,i){return +(bandHi[i]-bandLo[i]).toFixed(1);}))}
+          ]});
+      }catch(e){}
+    }
+    /* 风险体检 */
+    var h=$('#healthOut'); h.textContent='';
+    var net=totalI_()/12 - totalE_()/12;
+    var metrics=[
+      {k:'流动性比率（月结余/月支出）',v:(net/(totalE_()/12)).toFixed(2),lvl: net>0.15?'ok':(net>0.05?'warn':'danger'),t: net>0.15?'健康':(net>0.05?'偏紧':'紧张')},
+      {k:'经营收入稳定性（变异系数）',v:cv(INCOME).toFixed(2),lvl: cv(INCOME)<0.15?'ok':(cv(INCOME)<0.25?'warn':'danger'),t: cv(INCOME)<0.15?'稳定':(cv(INCOME)<0.25?'一般':'波动大')},
+      {k:'还贷收入比（估算）',v:'约 3.8%',lvl:'ok',t:'低于 50% 警戒线'}
+    ];
+    var p=el('div','panel'); p.appendChild(el('h3','','财务风险体检（不输出授信结论）'));
+    metrics.forEach(function(m){
+      var row=el('div','kv');
+      row.appendChild(el('span','',m.k));
+      var r=el('span',''); r.appendChild(el('span','tag '+m.lvl,m.v+' · '+m.t));
+      row.appendChild(r); p.appendChild(row);
+    });
+    p.appendChild(el('p','src','改进建议：1) 维持 3 个月以上固定支出的现金储备；2) 分散下游客户，降低单一大客户依赖；3) 本体检不输出授信结论。'));
+    h.appendChild(p);
+    addLog('现金流预测','12 月历史','已生成 6 月预测与体检',false);
+  });
+}
+function totalI_(){return INCOME.reduce(function(a,b){return a+b;},0);}
+function totalE_(){return EXPENSE.reduce(function(a,b){return a+b;},0);}
+function cv(arr){ var m=arr.reduce(function(a,b){return a+b;},0)/arr.length; var s=Math.sqrt(arr.reduce(function(a,b){return a+(b-m)*(b-m);},0)/arr.length); return s/m; }
+
+/* ================= 合规审计视图 ================= */
+function renderCompliance(){
+  var box=$('#auditLog'); box.textContent='';
+  var logs=getLogs();
+  if(!logs.length){ box.appendChild(el('div','sub','暂无记录。在其他视图使用 AI 功能后将自动归档。')); }
+  logs.slice(0,30).forEach(function(l){
+    var it=el('div','logitem');
+    it.appendChild(el('span','t',l.time+' ｜ '+l.op+' ｜ '+l.module+(l.blocked?' ｜ ⚠拦截':'')));
+    it.appendChild(el('div','','入：'+l.in));
+    it.appendChild(el('div','','出：'+l.out));
+    box.appendChild(it);
+  });
+}
+function bindCompliance(){
+  $('#btnCheck').addEventListener('click',function(){
+    var text=$('#inCheck').value;
+    var hits=scanCompliance(text);
+    var out=$('#checkOut'); out.textContent='';
+    var card=el('div','panel');
+    if(!hits.length){
+      card.appendChild(el('span','tag ok','未命中规则禁止话术（仍需人工复核）'));
+    }else{
+      card.appendChild(el('span','tag danger','命中 '+hits.length+' 条疑似违规：'));
+      hits.forEach(function(h){
+        var row=el('div','logitem');
+        row.appendChild(el('span','tag warn',h.pattern));
+        row.appendChild(el('div','','原文命中：「'+h.sample+'」'));
+        row.appendChild(el('div','','修正建议：删除绝对化 / 承诺性表述，改为风险揭示句式，如「历史业绩不代表未来，投资需谨慎」。'));
+        card.appendChild(row);
+      });
+    }
+    card.appendChild(el('p','src','规则初筛不替代合规人工审核；风险披露缺失需人工补充。'));
+    out.appendChild(card);
+    addLog('智能质检','文本 '+text.length+' 字','命中 '+hits.length+' 条',hits.length>0);
+  });
+  $('#btnLaw').addEventListener('click',function(){
+    var q=$('#inLaw').value.trim();
+    var out=$('#lawOut'); out.textContent='';
+    var res=LAWS.filter(function(l){ return !q || l.t.indexOf(q)>=0 || l.s.indexOf(q)>=0 || (q.length>=2&&l.s.indexOf(q)>=0); });
+    if(!res.length) res=LAWS;
+    res.forEach(function(l){
+      var it=el('div','qitem');
+      it.appendChild(el('div','q','《'+l.t+'》（'+l.page+'）'));
+      it.appendChild(el('div','a',l.s));
+      out.appendChild(it);
+    });
+  });
+}
+
+/* ================= 知识库视图 ================= */
+function renderKnowledge(){
+  var dl=$('#docList'); dl.textContent='';
+  DOCS.forEach(function(d){
+    var row=el('div','logitem');
+    row.appendChild(el('span','mono',d.name));
+    row.appendChild(el('span','tag gray',d.type));
+    row.appendChild(el('span','tag '+(d.status==='已入库'?'ok':(d.status==='解析中'?'warn':'danger')),d.status));
+    row.appendChild(el('span','tag',''+d.pages+' 页'));
+    dl.appendChild(row);
+  });
+  var ib=$('#ingestBox'); ib.textContent='';
+  DOCS.forEach(function(d){
+    var row=el('div','logitem');
+    row.appendChild(el('div','',d.name+' · '+d.status));
+    var bar=el('div','progbar'); var fill=el('div','fill'); fill.style.width=d.progress+'%'; bar.appendChild(fill);
+    row.appendChild(bar);
+    ib.appendChild(row);
+  });
+}
+function bindKnowledge(){
+  $('#btnKbAsk').addEventListener('click',async function(){
+    var q=$('#inKbQ').value.trim();
+    if(!q){ toast('请输入问题',true); return; }
+    var out=$('#kbOut'); out.textContent='检索中…';
+    var ans=await AIEngine.generate(q,{fn:'kb',discType:'general',module:'知识库问答'});
+    out.textContent=ans;
+  });
+}
+
+/* ================= 系统设置视图 ================= */
+function renderSettings(){
+  detectMode();
+  $('#selModel').value = State.mode==='llm' ? (localStorage.getItem('aif_provider')||'deepseek') : 'demo';
+  $('#inApiKey').value = localStorage.getItem('aif_key')||'';
+  $('#inEndpoint').value = localStorage.getItem('aif_endpoint')||'';
+  $('#kvLogCount').textContent = getLogs().length+' 条';
+  /* 角色 */
+  $$('#roleChips .rolechip').forEach(function(c){ c.classList.toggle('active', c.getAttribute('data-role')===State.role); });
+  showRolePerm();
+}
+function showRolePerm(){
+  var p=ROLE_PERM[State.role];
+  var box=$('#rolePerm'); box.textContent='';
+  box.appendChild(el('div','','当前角色：'+p.name));
+  box.appendChild(el('div','btnrow',''));
+  p.modules.forEach(function(m){ box.appendChild(el('span','tag ok',m)); });
+  box.appendChild(el('p','src','切换角色后，未授权模块的导航将被禁用并提示无权限。'));
+}
+function bindSettings(){
+  $('#btnSaveKey').addEventListener('click',function(){
+    var prov=$('#selModel').value;
+    var key=$('#inApiKey').value.trim();
+    if(prov==='demo' || !key){
+      localStorage.removeItem('aif_key'); State.mode='demo'; toast('已切换为演示模式（本地规则引擎）');
+    }else{
+      localStorage.setItem('aif_provider',prov);
+      localStorage.setItem('aif_key',key);
+      localStorage.setItem('aif_endpoint',$('#inEndpoint').value.trim());
+      State.mode='llm'; toast('已保存 Key 并切换为真实模型模式');
+    }
+    addLog('设置',prov,'切换模式：'+State.mode,false);
+  });
+  $('#btnTestConn').addEventListener('click',async function(){
+    if(State.mode!=='llm'){ toast('当前为演示模式，无需连接测试',false); return; }
+    toast('正在测试连接…',false);
+    var r=await AIEngine.generate('ping',{fn:'kb',discType:'general',module:'连接测试'});
+    toast('连接测试完成（演示回复已生成）',false);
+  });
+  $('#btnClearKey').addEventListener('click',function(){
+    localStorage.removeItem('aif_key'); localStorage.removeItem('aif_provider'); localStorage.removeItem('aif_endpoint');
+    State.mode='demo'; $('#inApiKey').value=''; $('#selModel').value='demo';
+    toast('Key 已清除，回到演示模式');
+  });
+  $$('#roleChips .rolechip').forEach(function(c){
+    c.addEventListener('click',function(){
+      State.role=c.getAttribute('data-role');
+      localStorage.setItem('aif_role',State.role);
+      $$('#roleChips .rolechip').forEach(function(x){x.classList.remove('active');});
+      c.classList.add('active');
+      showRolePerm();
+      addLog('设置','切换角色',State.role,false);
+      toast('已切换为：'+ROLE_PERM[State.role].name);
+    });
+  });
+  $('#btnWipe').addEventListener('click',function(){
+    try{ localStorage.removeItem('aif_key'); localStorage.removeItem('aif_provider'); localStorage.removeItem('aif_endpoint'); localStorage.removeItem('aif_logs'); localStorage.removeItem('aif_role'); }catch(e){}
+    State.role='analyst'; State.mode='demo';
+    renderSettings();
+    toast('本地存储已清除');
+  });
+}
+
+/* ================= 启动 ================= */
+function init(){
+  detectMode();
+  bindResearch(); bindCredit(); bindWealth(); bindSME(); bindCompliance(); bindKnowledge(); bindSettings();
+  if(!location.hash) location.hash='#dashboard';
+  onHash();
+}
+document.addEventListener('DOMContentLoaded', init);
+
+
+
+
+
+
+</script>
+</body>
+</html>
